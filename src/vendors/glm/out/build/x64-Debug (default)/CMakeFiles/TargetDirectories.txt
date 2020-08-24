@@ -1,0 +1,2 @@
+C:/Dev/CPP/PhotoToOpenGL/src/vendors/glm/out/build/x64-Debug (default)/CMakeFiles/edit_cache.dir
+C:/Dev/CPP/PhotoToOpenGL/src/vendors/glm/out/build/x64-Debug (default)/CMakeFiles/rebuild_cache.dir
