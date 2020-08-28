@@ -17,8 +17,6 @@ void VertexArray::AddBuffer(const VertexBuffer& vb, const VertexBufferLayout& la
 {
     Bind();
 
-    // TODO: IT BREAKS HERE -- WHY?
-
     vb.Bind();
     // gets elements, automatically types
     const auto& elements = layout.GetElements();

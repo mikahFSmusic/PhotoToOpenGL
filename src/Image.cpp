@@ -3,13 +3,16 @@
 #include "Image.h"
 #include "vendors/stb_image/stb_image.h"
 #include "vendors/stb_image/stb_image_write.h"
+#include "Utilities.h"
 
-Image::Image(std::string filepath)
+
+Image::Image(std::string filepath, int screen_Width, int screen_Height)
 	:img_ID(0), filepath(filepath),
-	img_Width(0), img_Height(0), img_Channels(0),
 	img_LocalBuffer(nullptr), normal_Buffer(nullptr),
 	gray_Img(nullptr), 
-	max_Alpha(NULL), min_Alpha(NULL)
+	max_Alpha(NULL), min_Alpha(NULL),
+	SCREEN_WIDTH(screen_Width), SCREEN_HEIGHT(screen_Height),
+	z_Mod(1.0)
 {	
 	img_LocalBuffer = stbi_load(filepath.c_str(), &img_Width, &img_Height, &img_Channels, 0);
 	if (img_LocalBuffer == NULL) {
@@ -96,4 +99,99 @@ void Image::setMinMaxAlphas()
 			max_Alpha = alpha_Map[i];
 		}
 	}
+}
+
+void Image::calcVerticesAndIndices()
+{
+	const double scr_Aspect_Ratio = (double)SCREEN_WIDTH / (double)SCREEN_HEIGHT;
+	const double img_Aspect_Ratio = (double)img_Width / (double)img_Height;
+
+	// set to 3.0 here to accomodate perspective shift, should probably be 2.0 for mathematical accuracy...  
+	const double width_Mod = (3.0 * img_Aspect_Ratio) / (scr_Aspect_Ratio);
+	const double x_Padding = (2.0 - width_Mod) / 2.0;
+	const double x_Increment =  (width_Mod / img_Width);
+
+	const double y_Increment = (2.0 / img_Height);
+
+	float x_Start = -1.0f + x_Padding;
+	float y_Start = 1.0f;
+	unsigned int row = 0;
+	unsigned int col = 0;
+	unsigned int pos_Count = 0;
+
+	unsigned int max_Cols = 0;
+	unsigned int max_Rows = 0;
+
+	// Assigns position values to vector
+	for (int i = 0; (unsigned)i < alpha_Map.size() - 1; i++)
+	{
+		Utils i_Utils;
+
+		// X
+		float x_Val = x_Start + (col * x_Increment);
+		vertices.push_back(x_Val);
+		// increment column index 
+		if (col < img_Width - 1) { col++; }
+		// DEBUG update max col
+		if (col > max_Cols) { max_Cols = col; }
+
+		// Y
+		float y_Val = y_Start - (row * y_Increment);
+		vertices.push_back(y_Val);
+
+		// Z
+		float z_Val = i_Utils.set_snorm(alpha_Map[i], min_Alpha, max_Alpha, -z_Mod, z_Mod);
+		//float z_Val = 0.0f;
+		vertices.push_back(z_Val);
+
+		float r_Val = i_Utils.norm(alpha_Map[i], min_Alpha, max_Alpha);
+		//float r_Val = 1.0f;
+		vertices.push_back(r_Val);
+
+		float g_Val = i_Utils.norm(alpha_Map[i], min_Alpha, max_Alpha);
+		//float g_Val = 0.5;
+		vertices.push_back(g_Val);
+
+		float b_Val = i_Utils.norm(alpha_Map[i], min_Alpha, max_Alpha);
+		//float b_Val = 1.0;
+		vertices.push_back(b_Val);
+
+		// Alpha
+		float a_Val = i_Utils.norm(alpha_Map[i], min_Alpha, max_Alpha);
+		if (a_Val > 0.94) { a_Val = 0.0; }
+		vertices.push_back(a_Val);
+		pos_Count += 7;
+
+		indices.push_back(i);
+
+		// checks for the end of the row
+		if (i > 0 && ((i % (img_Width)) == 0))
+		{
+			if (row < img_Height - 1)
+			{
+				row++; // if we've reached the end of a row, increment row index
+				col = 0; // reset column index at end of each row
+				//std::cout << "ROW: " << row << std::endl;
+
+				// DEBUG update max row
+				if (row > max_Rows) { max_Rows = row; }
+
+			}
+			else if (row == img_Height - 1)
+			{
+				col = 0; // reset column index at end of each row
+			}
+		}
+		num_Vertices++;
+	}
+}
+
+GLfloat* Image::getVertices()
+{
+	return &vertices[0];
+}
+
+GLint* Image::getIndices()
+{
+	return &indices[0];
 }

@@ -13,149 +13,36 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "imgui/ImGuiFileDialog.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
 #include "Image.h"
 #include "Renderer.h"
 #include "Shader.h"
 #include "Camera.h"
+#include "VertexArray.h"
+#include "VertexBuffer.h"
+#include "VertexBufferLayout.h"
+#include "Utilities.h"
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
 
-// signed normalization function for scaling input value with a known input range to an output range
-float snorm(float value, float in_Min, float in_Max) 
-{
-	float out_Value = ( ((1.0f - -1.0f) * ((value - in_Min) / (in_Max - in_Min))) + -1.0f );
-	return out_Value;
-}
-
-// unsigned normalization function
-float norm(float value, float in_Min, float in_Max) 
-{
-	float out_Value = ( ((1.0f - 0.0f) * ((value - in_Min) / (in_Max - in_Min))) + 0.0f );
-	return out_Value;
-}
-
 int main(void) 
 {
+
+	Utils utils;
+	// constants
 	// glsl version
 	const char* glsl_version = "#version 330";
 
-	/*Image image("res/images/drama_mask_white.jpg");
-	std::string normal_Path = image.ImgToGrayScale("gray_mask");*/
-	/*Image image("res/images/mikahfs.jpg");
-	std::string normal_Path = image.ImgToGrayScale("gray_mikah");*/
-	// loads an image to greyscale (normal) and returns the path to that normal
-	
-	Image image("res/images/willyb.jpg");
-	std::string normal_Path = image.ImgToGrayScale("gray_willyb");
-
-	image.GetAlphas(normal_Path);
-	image.setMinMaxAlphas();
-	
-	const int lcl_Width = image.img_Width;
-	const int lcl_Height = image.img_Height;
-
-	std::cout << "Width: " << lcl_Width << "| Height: " << lcl_Height << std::endl;
-	//std::cout << "Alphas Size: " << &lcl_Alphas.size() << std::endl;
-	
-	std::cout << "Min Alpha: " << image.min_Alpha << std::endl; 
-	std::cout << "Max Alpha: " << image.max_Alpha << std::endl;
-
-	const double x_Increment = 1.0f / lcl_Width; 
-	const double y_Increment = 2.0f / lcl_Height;
-
-	std::cout << "X Axis Modifier: " << x_Increment << std::endl;
-	std::cout << "Y Axis Modifier: " << y_Increment << std::endl;
-
-	std::vector<GLfloat> positions;
-	std::vector<GLint> indices;
-	unsigned int row = 0;
-	unsigned int col = 0;
-	unsigned int num_Vertices = 0; 
-	unsigned int pos_Count = 0; 
-
-	unsigned int max_Cols = 0;
-	unsigned int max_Rows = 0;
-
-	std::cout << " Alpha map size (should be 1,776,889):  " << image.alpha_Map.size() << std::endl;
-
-	// Assigns position values to vector
-	for (int i = 0; (unsigned)i < image.alpha_Map.size() - 1; i++)  
-	{
-		// POSITION ASSIGNMENT
-		// DEBUG
-		/*if (i < 10000) 
-		{
-			std::cout << "-----------------------------------" << std::endl;
-			std::cout << "i: " << i << " | C: " << col << " | R: " << row << std::endl;
-		}*/
-
-		// X
-		float x_Val = -0.5f + (col * x_Increment);
-		positions.push_back(x_Val);
-		// increment column index 
-		if (col < lcl_Width - 1) { col++; }
-		// DEBUG update max col
-		if (col > max_Cols) { max_Cols = col; }
-
-		// Y
-		float y_Val = 1.0f - (row * y_Increment);
-		positions.push_back(y_Val);
-		
-		// Z
-		float z_Val = snorm(image.alpha_Map[i], image.min_Alpha, image.max_Alpha);
-		positions.push_back(z_Val);
-
-		float r_Val = norm(image.alpha_Map[i], image.min_Alpha, image.max_Alpha);
-		positions.push_back(r_Val);
-
-		float g_Val = norm(image.alpha_Map[i], image.min_Alpha, image.max_Alpha);
-		positions.push_back(g_Val);
-		
-		float b_Val = norm(image.alpha_Map[i], image.min_Alpha, image.max_Alpha);
-		positions.push_back(b_Val);
-
-		// Alpha
-		float a_Val = norm(image.alpha_Map[i], image.min_Alpha, image.max_Alpha);
-		//if (a_Val > 0.94) { a_Val = 0.0; }
-		positions.push_back(a_Val);
-		pos_Count += 7;
-
-		//std::cout << "X: " << x_Val << " Y: " << y_Val << " Z: " << z_Val << std::endl;
-		
-		indices.push_back(i);
-
-		// checks for the end of the row
-		if (i > 0 && ((i % (image.img_Width)) == 0))
-		{
-			if (row < lcl_Height - 1)
-			{
-				row++; // if we've reached the end of a row, increment row index
-				col = 0; // reset column index at end of each row
-				//std::cout << "ROW: " << row << std::endl;
-
-				// DEBUG update max row
-				if (row > max_Rows) { max_Rows = row; }
-
-			}
-			else if (row == lcl_Height - 1)
-			{
-				col = 0; // reset column index at end of each row
-			}
-		}
-		num_Vertices++;
-	}
-
-	//std::cout << "Num Verteces: " << num_Vertices << std::endl;
-	//std::cout << "Num Positions: " << pos_Count << std::endl;
-
-	// OpenGL stuff
-
+	// OpenGL Window Init
 	GLFWwindow* window;
 
-	/* Initialize the library */
+	// GLFW Init
 	if (!glfwInit()) return -1;
-
 	// create window and context with core profile
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -176,7 +63,6 @@ int main(void)
 
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
-	//glfwSwapInterval(1);
 
 	// checks if GLEW intializes correctly
 	if (glewInit() != GLEW_OK)
@@ -185,106 +71,274 @@ int main(void)
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
-	//GLCall(glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
-
-	Shader shader((const GLchar*)"res/shaders/Vertex.Shader", (const GLchar*)"res/shaders/Fragment.Shader");
-
-	GLfloat* vertices = &positions[0];
-	
-	float max = *std::max_element(positions.begin(), positions.end());
-	int max_Index = std::max_element(positions.begin(), positions.end()) - positions.begin();
-
-	//std::cout << "Max value: " << max << std::endl;
-	//std::cout << "Max value INDEX: " << max_Index << std::endl;
-
-
-	// for testing, prints out vertices 
-	//std::cout << "-------" << std::endl;
-	/*for (int i = 0; (unsigned)i < pos_Count; i++) 
-	{
-
-		if (i > 2318000 && i < 2319000)
-		{
-			if (i % 3 == 0) {
-			std::cout << "-------" << std::endl;
-		}
-			std::cout << "Index: " << i << " | Value: " << vertices[i] << std::endl;
-		}
-	}*/
-
-	//std::cout << "FIRST INDEX OF POSITIONS ARRAY: " << vertices[0] << std::endl;
-
-	GLuint VBO, VAO;
-	// generate vertex array object
-	GLCall(glGenVertexArrays(1, &VAO));
-
-	// generate vertex buffer object
-	GLCall(glGenBuffers(1, &VBO));
-
-	GLCall(glBindVertexArray(VAO));
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, num_Vertices * 7 * sizeof(GLfloat), vertices, GL_STATIC_DRAW));
-
-	std::cout << "Num Indices: " << indices.size() << " | Calculated Num Vertices: " << num_Vertices << std::endl;
-	std::cout << "POSITIONS: " << positions.size() << "|  Verteces: " << (positions.size() / 3) << std::endl;
-	std::cout << "Sizeof Vertices: " << sizeof(vertices) << " | Sizeof Positions: " << sizeof(positions) << std::endl;
-	GLCall(glEnableVertexAttribArray(0));
-	GLCall(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), (GLvoid*) 0));
-
-	GLCall(glEnableVertexAttribArray(1));
-	GLCall(glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))));
-
-	GLCall(glBindVertexArray(0));
-
-	//GLCall(glEnable(GL_DEPTH_TEST));
 	// enable blending
 	GLCall(glEnable(GL_BLEND));
 	// get source alpha, subtract from one to blend alpha at destination  
 	GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-	// Camera
+	// ImGUI stuff
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
+	ImGui::StyleColorsDark();
 
-	//glm::vec3 camera_Position(0, 0, 3);
+	const std::string& mvp_Name = "u_MVP";
+	const std::string& color_Name = "color_Mod";
+
+	// MODEL
+
+	// Translation
+	float mdl_XTranslate = 0.0f, mdl_YTranslate = 0.0f, mdl_ZTranslate = 0.0f;
 	
-	//Camera camera(camera_Position, 70.0f, (float)SCREEN_WIDTH/(float)SCREEN_HEIGHT, 1.0, -1.0f);
-	//glm::mat4 m_Proj = glm::ortho(-1.0f, (float)SCREEN_WIDTH, -1.0f, (float)SCREEN_HEIGHT, -100.0f, 100.0f);
-	//glm::mat4 m_View = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-	//glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-	//glm::mat4 mvp = m_Proj * m_View * model; 
-	//glm::mat4 mvp = glm::mat4(12.0);
+	// Rotation
+	float mdl_XRotate = 0.0f, mdl_YRotate = 0.0f, mdl_ZRotate = 0.0f;
 
+	// Scale
+	float g_Scale = 1.0f;
 
-	glm::mat4 mvp = glm::translate(glm::mat4(1.0f), glm::vec3(0.3, 0.3, 0.3));
-	const std::string& name = "u_MVP";
+	// CAMERA 
+
+	// Viewport Translation
+	float x_Modulate = 0.0f, y_Modulate = 0.0f, z_Modulate = 0.0;
+
+	// Color
+	float red_Mod = 0.0f, green_Mod = 0.0f, blue_Mod = 0.0;
+	float alpha_Mod = 1.0;
+
+	glm::vec3 camera_Position = glm::vec3(0, 0, 1);
+	glm::vec3 camera_Target = glm::vec3(0.0, 0.0, 0.0); // camera targets the origin
+	glm::vec3 up_Vector = glm::vec3(0, 1, 0);
+	
+	// PERSPECTIVE 
+	float field_Of_View = 45.0;
+
+	// SETTINGS
+	const char* gl_Draw_Mode[] = { "GL_POINTS", "GL_LINES", "GL_LINE_LOOP", "GL_TRIANGLES"};
+	const int gl_Draw_Mode_Int[] = { GL_POINTS, GL_LINES, GL_LINE_LOOP, GL_TRIANGLES };
+	int current_Draw_Mode = 1; 
+	float gl_Point_Size = 0.2;
+
+	std::unique_ptr<VertexArray> VAO;
+	std::unique_ptr<VertexBuffer> VBO;
+
+	Shader shader((const GLchar*)"res/shaders/Vertex.Shader", (const GLchar*)"res/shaders/Fragment.Shader");
+
+	std::unique_ptr<Image> image;
+	GLfloat* vertices;
+	int num_Vertices;
+
+	// Initialize Default Image
+	std::string img_Filepath = "res/images/default.jpg";
+	std::string img_Outpath = "gray_default";
+
+	// load the default image
+	image = std::make_unique<Image>(img_Filepath, SCREEN_WIDTH, SCREEN_HEIGHT);
+	std::string normal_Path = image->ImgToGrayScale(img_Outpath);
+	// initialize image data
+	image->GetAlphas(normal_Path);
+	image->setMinMaxAlphas();
+	// TODO: make this modifiable in real time by ImGui interaction
+	image->z_Mod = 0.5;
+	float new_Z = image->z_Mod;
+	// calculate vertex and index positions
+	image->calcVerticesAndIndices();
+	vertices = image->getVertices();
+	num_Vertices = image->num_Vertices;
+
+	//  Vertex array obect, 
+	VAO = std::make_unique<VertexArray>();
+	VBO = std::make_unique<VertexBuffer>(vertices, num_Vertices * 7 * sizeof(GLfloat));
+	VertexBufferLayout layout;
+	layout.Push<float>(3);
+	layout.Push<float>(4);
+	VAO->AddBuffer(*VBO, layout);
+
 	while (!glfwWindowShouldClose(window)) {
-		GLCall(glClearColor(0.0, 0.0, 0.0, 1.0));
-		GLCall(glClear(GL_COLOR_BUFFER_BIT));
-		
-		shader.Use();
+
+		GLCall(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+		GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+		GLCall(glPointSize(gl_Point_Size));
+
+		// Start the ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		// Model Matrix		
+		glm::vec3 model_Position = glm::vec3(mdl_XTranslate, mdl_YTranslate, mdl_ZTranslate);
+		glm::mat4 translation = glm::translate(glm::mat4(1.0f), model_Position);
+		glm::mat4 rotation_X = glm::rotate(glm::radians(mdl_XRotate), glm::vec3(1, 0, 0));
+		glm::mat4 rotation_Y = glm::rotate(glm::radians(mdl_YRotate), glm::vec3(0, 1, 0));
+		glm::mat4 rotation_Z = glm::rotate(glm::radians(mdl_ZRotate), glm::vec3(0, 0, 1));
+		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(g_Scale));
+		glm::mat4 model_Matrix = translation * rotation_X * rotation_Y * rotation_Z * scale;
+
+		// View Matrix
+		glm::mat4 view_Matrix = (glm::translate(glm::mat4(1.0f), glm::vec3(-x_Modulate, -y_Modulate, -z_Modulate)));
+
+		// Camera Matrix
+		glm::vec3 camera_Position = glm::vec3(0.0f, 0.0f, 3.0f);
+		glm::mat4 camera_Matrix = glm::lookAt(camera_Position, camera_Target, up_Vector);
+
+		// Projection Matrix 
+		glm::mat4 projection_Matrix = glm::perspective(glm::radians(field_Of_View), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		glm::mat4 mvp = projection_Matrix * camera_Matrix * view_Matrix * model_Matrix;
+
+		// Draw Color
+		glm::mat4 color = glm::translate(glm::mat4(alpha_Mod), glm::vec3(red_Mod, green_Mod, blue_Mod));
+
+		shader.Bind();
 		// gets location of mvp uniform
-		GLCall(GLint u_Location = glGetUniformLocation(shader.m_RendererID, name.c_str()));
-		if (u_Location == -1)
-			std::cout << "Warning: uniform '" << name << "' doesn't exist." << std::endl;
+		GLCall(GLint mvp_Location = glGetUniformLocation(shader.m_RendererID, mvp_Name.c_str()));
+		if (mvp_Location == -1)
+			std::cout << "Warning: uniform '" << mvp_Name << "' doesn't exist." << std::endl;
 
-		//// set the mvp (model view projection) matrix by name, with it's respective glm::vec4 value (model * view * projection)
-		GLCall(glUniformMatrix4fv(u_Location, 1, GL_TRUE, &mvp[0][0]));
+		// color uniform
+		GLCall(GLint color_Location = glGetUniformLocation(shader.m_RendererID, color_Name.c_str()));
+		if (color_Location == -1)
+			std::cout << "Warning: uniform '" << color_Name << "' doesn't exist." << std::endl;
+
+		// instantiates uniforms
+		GLCall(glUniformMatrix4fv(mvp_Location, 1, GL_FALSE, &mvp[0][0]));
+		GLCall(glUniformMatrix4fv(color_Location, 1, GL_TRUE, &color[0][0]));
+		// Binds Vertex Array Object
+		VAO->Bind();
 		
-		GLCall(glBindVertexArray(VAO)); 
-		glPointSize(1.0);
-		GLCall(glDrawArrays(GL_POINTS, 0, num_Vertices));
-		glBindVertexArray(0);
+		// Draw Call 
+		GLCall(glDrawArrays(gl_Draw_Mode_Int[current_Draw_Mode], 0, num_Vertices));
 
-		// Swap front and back buffers
+		// IMGUI PARAMETERS MENU
+
+		// TODO: Load Image, calculate vertices on load before executing any OpenGL code
+		ImGui::Begin("Parameters");
+
+		ImGui::Text("Load");
+		
+		if (ImGui::Button("Open Image File")) 
+		{
+			igfd::ImGuiFileDialog::Instance()->OpenDialog("ChooseImgFileDlgKey", "Choose File", ".jpg, .png", ".");
+		}
+		// display
+		if (igfd::ImGuiFileDialog::Instance()->FileDialog("ChooseImgFileDlgKey"))
+		{
+			// action if OK
+			if (igfd::ImGuiFileDialog::Instance()->IsOk == true)
+			{
+				img_Filepath = igfd::ImGuiFileDialog::Instance()->GetFilepathName();
+
+				image = std::make_unique<Image>(img_Filepath, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+				img_Outpath = "gray";
+				normal_Path = image->ImgToGrayScale(img_Outpath);
+				image->GetAlphas(normal_Path);
+				image->setMinMaxAlphas();
+				// TODO: make this modifiable in real time by ImGui interaction
+				image->z_Mod = 0.5;
+				// calculate vertex and index positions
+				image->calcVerticesAndIndices();
+				vertices = image->getVertices();
+				num_Vertices = image->num_Vertices;
+
+				//  Vertex array obect, 
+				VAO = std::make_unique<VertexArray>();
+				VBO = std::make_unique<VertexBuffer>(vertices, num_Vertices * 7 * sizeof(GLfloat));
+				VertexBufferLayout layout;
+				layout.Push<float>(3);
+				layout.Push<float>(4);
+				VAO->AddBuffer(*VBO, layout);
+
+			}
+			// close
+			igfd::ImGuiFileDialog::Instance()->CloseDialog("ChooseImgFileDlgKey");
+		}
+		
+
+		// Mouse + Keyboard Camera Control
+		ImGuiMouseCursor mouse_Cursor = ImGui::GetMouseCursor();
+		ImVec2 mousePos = ImGui::GetMousePos();
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsMousePosValid(&mousePos))
+		{
+			ImVec2 mouse_Drag_Delta = ImGui::GetMouseDragDelta();
+			// TODO: GET SHIFT KEY PRESS WORKING
+			if (ImGui::IsKeyDown(GLFW_KEY_LEFT_SHIFT)) 
+			{
+				mdl_ZRotate = utils.set_snorm(mouse_Drag_Delta[1], 0, SCREEN_WIDTH, 0, 1080.0f);
+			}
+			else {
+				mdl_XRotate = utils.set_snorm(mouse_Drag_Delta[1], 0, SCREEN_WIDTH, 0, 1080.0f);
+				mdl_YRotate = utils.set_snorm(mouse_Drag_Delta[0], 0, SCREEN_HEIGHT, 0, 1080.0f);
+			}
+			
+			
+		} else if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && ImGui::IsMousePosValid(&mousePos))
+		{
+			ImVec2 mouse_Drag_Delta = ImGui::GetMouseDragDelta(1);
+			//std::cout << "Drag X: " << mouse_Drag_Delta[0] << " | " << "Drag Y: " << mouse_Drag_Delta[1] << std::endl;
+			if (ImGui::IsKeyDown(GLFW_KEY_LEFT_SHIFT)) {
+				mdl_ZTranslate = utils.set_snorm(mouse_Drag_Delta[1], -SCREEN_HEIGHT, SCREEN_HEIGHT, -3.0f, 3.0f);
+			}
+			else
+			{
+				mdl_XTranslate = utils.set_snorm(mouse_Drag_Delta[0], -SCREEN_WIDTH, SCREEN_WIDTH, -3.0f, 3.0f);
+				mdl_YTranslate = utils.set_snorm(mouse_Drag_Delta[1], -SCREEN_HEIGHT, SCREEN_HEIGHT, -3.0f, 3.0f);
+			}
+			// need handling for z translation (Scroll wheel)
+		}
+		
+
+		ImGui::Separator();
+		ImGui::Text("Model");
+		// TODO: Need to convert these to mouse controllable rotation/translation functions, probably using camera controls.
+		// TODO: add "explode", width, height 
+		ImGui::Text("Use Left [Shift] for Z axis tranlation/rotation");
+		ImGui::SliderFloat("Scale ", &g_Scale, 0.001f, 2.0f);
+		
+		ImGui::Separator();
+
+		ImGui::Text("View");
+		ImGui::SliderFloat("Cam Move X ", &x_Modulate, -3.0f, 3.0f);
+		ImGui::SliderFloat("Cam Move Y ", &y_Modulate, -3.0f, 3.0f);
+		ImGui::SliderFloat("Cam Move Z ", &z_Modulate, -3.0f, 3.0f);
+
+		ImGui::Separator();
+
+		ImGui::Text("Perspective");
+		ImGui::SliderFloat("FOV ", &field_Of_View, 1.0f, 150.0f);
+
+		ImGui::Separator();
+
+		ImGui::Text("Color");
+		ImGui::SliderFloat("Red", &red_Mod, 0.0f, 1.0f);
+		ImGui::SliderFloat("Green", &green_Mod, 0.0f, 1.0f);
+		ImGui::SliderFloat("Blue", &blue_Mod, 0.0f, 1.0f);
+		ImGui::SliderFloat("Alpha", &alpha_Mod, 0.0f, 1.0f);
+
+		ImGui::Separator();
+
+		ImGui::Text("Draw Options");
+		// DRAW MODE
+		ImGui::ListBox("Draw Mode", &current_Draw_Mode, gl_Draw_Mode, IM_ARRAYSIZE(gl_Draw_Mode), 4);
+		ImGui::SliderFloat("Point Size", &gl_Point_Size, 0.001f, 10.0f);
+
+		ImGui::End();
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		GLCall(glBindVertexArray(0));
+		// Swap frnt and back buffers
 		glfwSwapBuffers(window);
 
 		// Poll for, and process events
 		glfwPollEvents();
 	}
 
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO); 
+	ImGui_ImplGlfw_Shutdown();
+	ImGui_ImplOpenGL3_Shutdown();
 	glfwTerminate();
+	shader.Unbind();
+	VAO->Unbind();
+	VBO->Unbind();
+	image->~Image();
  }
 
 // 1. Generate an array of points, evenly distributed accross x and y axis, all of which have the same z value (0) -- DONE

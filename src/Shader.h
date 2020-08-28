@@ -89,9 +89,12 @@ public:
         m_RendererID = this->Program;
     }
     // Uses the current shader
-    void Use()
+    void Bind()
     {
         glUseProgram(this->Program);
     }
-
+    void Unbind()
+    {
+        glUseProgram(0);
+    }
 };

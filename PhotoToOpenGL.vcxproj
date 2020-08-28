@@ -92,9 +92,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>res;src;src/vendors;$(SolutionDir)Dependencies\GLFW\include;$(SolutionDir)Dependencies\GLEW\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dependencies/dirent/include;res;src;src/vendors;$(SolutionDir)Dependencies\GLFW\include;$(SolutionDir)Dependencies\GLEW\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,6 +156,13 @@
     <ClCompile Include="src\Image.cpp" />
     <ClCompile Include="src\IndexBuffer.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui.cpp" />
+    <ClCompile Include="src\vendors\imgui\ImGuiFileDialog.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\vendors\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\vendors\stb_image\stb_image.cpp" />
     <ClCompile Include="src\vendors\stb_image\stb_image_write.cpp" />
     <ClCompile Include="src\VertexArray.cpp" />
@@ -167,6 +174,17 @@
     <ClInclude Include="src\Image.h" />
     <ClInclude Include="src\IndexBuffer.h" />
     <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\Utilities.h" />
+    <ClInclude Include="src\vendors\imgui\imconfig.h" />
+    <ClInclude Include="src\vendors\imgui\imgui.h" />
+    <ClInclude Include="src\vendors\imgui\ImGuiFileDialog.h" />
+    <ClInclude Include="src\vendors\imgui\ImGuiFileDialogConfig.h" />
+    <ClInclude Include="src\vendors\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="src\vendors\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\vendors\imgui\imgui_internal.h" />
+    <ClInclude Include="src\vendors\imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\vendors\imgui\imstb_textedit.h" />
+    <ClInclude Include="src\vendors\imgui\imstb_truetype.h" />
     <ClInclude Include="src\vendors\stb_image\stb_image.h" />
     <ClInclude Include="src\vendors\stb_image\stb_image_write.h" />
     <ClInclude Include="src\VertexArray.h" />
